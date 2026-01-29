@@ -113,7 +113,7 @@ export default function Page() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          backgroundImage: "url('/public/BlueFCLogo.png')",
+          backgroundImage: "url('/BlueFCLogo.png')",
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center",
           backgroundSize: "420px",
