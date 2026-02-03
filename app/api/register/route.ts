@@ -3,19 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 /* ================= TYPES ================= */
 
-interface Member {
-  name: string;
-  roll: string;
-  phone: string;
-}
-
 interface RegistrationBody {
   type: "individual" | "team";
   name: string;
   roll: string;
   email: string;
   phone: string;
-  members?: Member[];
+  // Frontend sends these as comma-separated strings
+  memberNames?: string;
+  memberRolls?: string;
+  memberPhones?: string;
 }
 
 /* ================= HANDLER ================= */
@@ -34,11 +31,15 @@ export async function POST(req: NextRequest) {
 
     /* ---------- Team validation (MIN 2, MAX 5) ---------- */
     if (body.type === "team") {
-      if (!body.members || body.members.length < 2 || body.members.length > 4) {
+      const memberCount = body.memberNames
+        ? body.memberNames.split(",").filter((n) => n.trim()).length
+        : 0;
+
+      if (memberCount < 2 || memberCount > 5) {
         return NextResponse.json(
           {
             success: false,
-            error: "Team must have between 3 and 5 members",
+            error: "Team must have between 2 and 5 members",
           },
           { status: 400 }
         );
@@ -63,15 +64,18 @@ export async function POST(req: NextRequest) {
 
     const sheets = google.sheets({ version: "v4", auth });
 
-    /* ---------- Convert members → strings ---------- */
-    const memberNames =
-      body.members?.map((m) => m.name).join(" | ") ?? "";
+    /* ---------- Format member data (replace commas with pipes for consistency) ---------- */
+    const memberNames = body.memberNames
+      ? body.memberNames.split(",").map((n) => n.trim()).join(" | ")
+      : "";
 
-    const memberRolls =
-      body.members?.map((m) => m.roll).join(" | ") ?? "";
+    const memberRolls = body.memberRolls
+      ? body.memberRolls.split(",").map((r) => r.trim()).join(" | ")
+      : "";
 
-    const memberPhones =
-      body.members?.map((m) => m.phone).join(" | ") ?? "";
+    const memberPhones = body.memberPhones
+      ? body.memberPhones.split(",").map((p) => p.trim()).join(" | ")
+      : "";
 
     /* ---------- Append to Sheet ---------- */
     await sheets.spreadsheets.values.append({
@@ -81,14 +85,14 @@ export async function POST(req: NextRequest) {
       requestBody: {
         values: [
           [
-            body.type,     // Type
-            body.name,     // Name
-            body.roll,     // Roll No
-            body.email,    // Email
-            body.phone,    // Phone
-            memberNames,   // Member Names
-            memberRolls,   // Member Roll Numbers
-            memberPhones, // Member Phone Numbers
+            body.type,      // Type
+            body.name,      // Name (Individual / Team Leader)
+            body.roll,      // Roll No
+            body.email,     // Email
+            body.phone,     // Phone
+            memberNames,    // Member Names
+            memberRolls,    // Member Roll Numbers
+            memberPhones,   // Member Phone Numbers
           ],
         ],
       },
